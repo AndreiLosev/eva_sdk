@@ -208,6 +208,10 @@ enum ServicePayloadKind {
         ServicePayloadKind.initial => 1,
         ServicePayloadKind.ping => 0,
       };
+
+  bool isInitial() => this == ServicePayloadKind.initial;
+
+  bool isPing() => this == ServicePayloadKind.ping;
 }
 
 extension ToServicePayloadKind on int {
