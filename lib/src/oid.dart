@@ -1,4 +1,4 @@
-import 'package:eva_sdk/src/enums.dart';
+import 'package:eva_sdk/src/enum/item_kind.dart';
 
 class Oid {
   late final ItemKind kind;

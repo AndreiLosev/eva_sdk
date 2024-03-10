@@ -3,9 +3,16 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:busrt_client/busrt_client.dart';
-import 'package:eva_sdk/src/const_and_dto.dart';
 import 'package:eva_sdk/src/controller.dart';
-import 'package:eva_sdk/src/enums.dart';
+import 'package:eva_sdk/src/dto/eva_error.dart';
+import 'package:eva_sdk/src/dto/initial_payload.dart';
+import 'package:eva_sdk/src/dto/service_info.dart';
+import 'package:eva_sdk/src/enum/eapi_topic.dart';
+import 'package:eva_sdk/src/enum/eva_error_kind.dart';
+import 'package:eva_sdk/src/enum/event_kind.dart';
+import 'package:eva_sdk/src/enum/log_level.dart';
+import 'package:eva_sdk/src/enum/service_payload_kind.dart';
+import 'package:eva_sdk/src/enum/service_status.dart';
 import 'package:eva_sdk/src/helpers.dart';
 import 'package:eva_sdk/src/log.dart';
 import 'package:eva_sdk/src/oid.dart';

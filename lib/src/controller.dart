@@ -1,8 +1,9 @@
 import 'dart:typed_data';
 
 import 'package:busrt_client/busrt_client.dart';
-import 'package:eva_sdk/src/const_and_dto.dart';
-import 'package:eva_sdk/src/enums.dart';
+import 'package:eva_sdk/src/dto/bus_action.dart';
+import 'package:eva_sdk/src/enum/action_status.dart';
+import 'package:eva_sdk/src/enum/eapi_topic.dart';
 import 'package:msgpack_dart/msgpack_dart.dart';
 import 'package:uuid/parsing.dart';
 

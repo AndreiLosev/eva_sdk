@@ -1,7 +1,8 @@
 import 'dart:convert';
 
 import 'package:busrt_client/busrt_client.dart';
-import 'package:eva_sdk/src/enums.dart';
+import 'package:eva_sdk/src/enum/eapi_topic.dart';
+import 'package:eva_sdk/src/enum/log_level.dart';
 
 class Logger {
   final Bus _bus;
