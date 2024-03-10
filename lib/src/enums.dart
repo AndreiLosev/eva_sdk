@@ -25,6 +25,17 @@ enum LogLevel {
   bool lessOrequal(LogLevel level) => code() <= level.code();
 }
 
+extension CodeToLogLevel on int {
+  LogLevel toLogLevel() => switch (this) {
+        0 => LogLevel.trace,
+        10 => LogLevel.debug,
+        20 => LogLevel.info,
+        30 => LogLevel.warn,
+        40 => LogLevel.error,
+        _ => throw Exception("$this is not LogLevelCode"),
+      };
+}
+
 enum EventKind {
   any,
   local,
@@ -37,6 +48,13 @@ enum EventKind {
         EventKind.local => 'local',
         EventKind.remote => 'remote',
         EventKind.remoteArchive => 'remote_archive',
+      };
+
+  EapiTopic toEapiTopic() => switch (this) {
+        EventKind.any => EapiTopic.anyStateTopic,
+        EventKind.local => EapiTopic.logInputTopic,
+        EventKind.remote => EapiTopic.remoteStateTopic,
+        EventKind.remoteArchive => EapiTopic.remoteArchiveStateTopic,
       };
 }
 

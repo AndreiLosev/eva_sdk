@@ -16,35 +16,34 @@ class Logger {
     }
   }
 
-  Future<void> debug(Iterable<Object> mess) async {
+  Future<void> debug(Object mess) async {
     if (_minLevel.lessOrequal(LogLevel.debug)) {
       await _log(LogLevel.debug, mess);
     }
   }
 
-  Future<void> info(Iterable<Object> mess) async {
+  Future<void> info(Object mess) async {
     if (_minLevel.lessOrequal(LogLevel.info)) {
       await _log(LogLevel.info, mess);
     }
   }
 
-  Future<void> warn(Iterable<Object> mess) async {
+  Future<void> warn(Object mess) async {
     if (_minLevel.lessOrequal(LogLevel.warn)) {
       await _log(LogLevel.warn, mess);
     }
   }
 
-  Future<void> error(Iterable<Object> mess) async {
+  Future<void> error(Object mess) async {
     if (_minLevel.lessOrequal(LogLevel.error)) {
       await _log(LogLevel.error, mess);
     }
   }
 
-  Future<void> _log(LogLevel level, Iterable<Object> mess) async {
-    final prepared = mess.map((e) => e.toString()).join(" ");
+  Future<void> _log(LogLevel level, Object mess) async {
     await _bus.publish(
       EapiTopic.logInputTopic.resolve(level.toString()),
-      _codec.convert(prepared),
+      _codec.convert(mess.toString()),
       QoS.no,
     );
   }

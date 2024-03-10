@@ -1,5 +1,8 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 
+import 'package:busrt_client/busrt_client.dart';
 import 'package:eva_sdk/src/enums.dart';
 import 'package:eva_sdk/src/oid.dart';
 
@@ -77,12 +80,12 @@ class InitialPayload<T extends Object> {
 class InitialTimeoutConfig {
   final Duration? startup;
   final Duration? shutdown;
-  final Duration? default1;
+  final Duration default1;
 
   InitialTimeoutConfig.fromMap(Map<String, Object?> map)
       : startup = _fromDoubleSeconds(map['startup'] as double?),
         shutdown = _fromDoubleSeconds(map['shutdown'] as double?),
-        default1 = _fromDoubleSeconds(map['default'] as double?);
+        default1 = _fromDoubleSeconds(map['default'] as double)!;
 
   static Duration? _fromDoubleSeconds(double? sec) {
     if (sec == null) {
@@ -98,7 +101,7 @@ class InitialTimeoutConfig {
 class InitialBusConfig {
   final String type;
   final String path;
-  final int? timeout;
+  final Duration? timeout;
   final int bufSize;
   final int bufTtl;
   final int queueSize;
@@ -115,7 +118,7 @@ class InitialBusConfig {
   InitialBusConfig.fromMap(Map<String, dynamic> map)
       : type = map['type'],
         path = map['path'],
-        timeout = map['timeout'],
+        timeout = map['timeout'] is int ? Duration(seconds: map['timeout']) : null,
         bufSize = map['buf_size'],
         bufTtl = map['buf_ttl'],
         queueSize = map['queue_size'];
@@ -167,9 +170,10 @@ class ServiceMethodParam {
 class ServiceMethod {
   final String name;
   final String description;
+  final FutureOr<Uint8List?> Function(RpcEvent) fn;
   final List<ServiceMethodParam> params = [];
 
-  ServiceMethod(this.name, [this.description = ""]);
+  ServiceMethod(this.name, this.fn, [this.description = ""]);
 
   void required(String name, String type, [String description = ""]) =>
       params.add(ServiceMethodParam(name, type, true, description));

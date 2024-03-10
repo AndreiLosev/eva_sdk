@@ -6,7 +6,9 @@ import 'package:busrt_client/busrt_client.dart';
 import 'package:eva_sdk/src/const_and_dto.dart';
 import 'package:eva_sdk/src/controller.dart';
 import 'package:eva_sdk/src/enums.dart';
+import 'package:eva_sdk/src/helpers.dart';
 import 'package:eva_sdk/src/log.dart';
+import 'package:eva_sdk/src/oid.dart';
 import 'package:msgpack_dart/msgpack_dart.dart';
 import 'package:typed_data/typed_data.dart';
 
@@ -25,7 +27,6 @@ class Service {
   late final Controller _controller;
   late final ServiceInfo _serviceInfo;
   late final Logger _logger;
-  late Uint8List _svcInfoPacked;
 
   final _serviceState = _ServiceState();
   final _stdinBuffer = Uint8Buffer();
@@ -72,11 +73,32 @@ class Service {
     });
 
     _stdintSubscription?.onError((e) async {
-      await _logger.error([e]);
+      await _logger.error(e);
       _stdintSubscription?.cancel();
       await markTerminating();
     });
     Future.microtask(() => _handleStdin());
+  }
+
+  Future<void> waitCore() async {
+    final timer = Stopwatch();
+    timer.stop();
+    final timeout = _initPaload.timeout.startup ?? _initPaload.timeout.default1;
+
+    while (_serviceState.active) {
+      try {
+        final req = await _rpc.call('eva.core', 'test');
+        final result = await req.waitCompleted();
+
+        if (deserialize(result!.payload)['active'] == true) {
+          return;
+        }
+      } catch (_) {}
+      if (timer.elapsed >= timeout) {
+        throw Exception("core wait timeout");
+      }
+      await Future.delayed(const Duration(milliseconds: 100));
+    }
   }
 
   Future<void> markTerminating() async {
@@ -100,6 +122,69 @@ class Service {
   bool isModeNoraml() => !_initPaload.failMode;
 
   bool isModeRTF() => _initPaload.failMode;
+
+  Future<void> init(ServiceInfo info,
+      [FutureOr<void> Function(Frame f)? onFrame]) async {
+    //TODO dropPrivileges
+    final bus = await _initBus();
+    _logger = Logger(bus, _initPaload.core.logLevel.toLogLevel());
+    _controller = Controller(bus);
+    _serviceInfo = info;
+    _rpc = Rpc(bus, onCall: _handleRpcCall);
+
+    if (onFrame != null) {
+      _rpc.onFrame = onFrame;
+    }
+
+    _registerSignals();
+    await _markReady();
+
+    Timer(Duration.zero, () async {
+      while (_serviceState.active) {
+        await Future.delayed(const Duration(milliseconds: 100));
+      }
+      await markTerminating();
+    });
+  }
+
+  Future<void> subscribeOIDs(Iterable<Oid> items, EventKind kind) async {
+    final sfx = kind.toEapiTopic();
+    final topics = items.map((e) => sfx.resolve(e.asPath())).toList();
+    await _rpc.bus.subscribe(topics);
+  }
+
+  bool isActive() => _serviceState.active;
+
+  bool isShutdownRequested() => _serviceState.shutdownRequested;
+
+  Duration getTimeout() => _initPaload.timeout.default1;
+
+  Future<void> _markReady() async {
+    if (_serviceState.markedReady) {
+      return;
+    }
+
+    _serviceState.markedReady = true;
+    await _mark(ServiceStatus.ready);
+    await _logger.info("${_serviceInfo.description} started");
+  }
+
+  void _registerSignals() {
+    ProcessSignal.sigint.watch().listen((_) => _serviceState.active = false);
+    ProcessSignal.sigterm.watch().listen((_) => _serviceState.active = false);
+  }
+
+  Future<Bus> _initBus() async {
+    if (_initPaload.bus.type != 'native') {
+      throw Exception("bus ${_initPaload.bus.type} is not suported");
+    }
+
+    final bus = Bus(_initPaload.id,
+        timeout: _initPaload.bus.timeout ?? _initPaload.timeout.default1);
+    await bus.connect(_initPaload.bus.path);
+
+    return bus;
+  }
 
   Future<Uint8List> _stdinRead(int len) async {
     while (_stdinBuffer.length < len) {
@@ -130,6 +215,30 @@ class Service {
     );
   }
 
-  String? _dataPath() =>
-      _initPaload.user != 'nobody' ? _initPaload.dataPath : null;
+  FutureOr<Uint8List?> _handleRpcCall(RpcEvent e) async {
+    if (e.method == null) {
+      noRpcMethod(e.method);
+    }
+
+    return switch (e.method!) {
+      "test" => serialize({'status': _serviceState.active}),
+      "info" => serialize(_serviceInfo.toMap()),
+      "stop" => () {
+          _serviceState.active = false;
+          return null;
+        }(),
+      _ => _rpcCallWrapper(e.method!, e),
+    };
+  }
+
+  FutureOr<Uint8List?> _rpcCallWrapper(String methodName, RpcEvent e) async {
+    try {
+      final ServiceMethod method =
+          _serviceInfo.methods.firstWhere((i) => i.name == methodName);
+      return await method.fn(e);
+    } on StateError {
+      noRpcMethod(methodName);
+      return null;
+    }
+  }
 }
