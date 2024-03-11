@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -29,6 +30,9 @@ class _ServiceState {
 }
 
 class Service {
+  
+  static Service? _instanse;
+
   late final InitialPayload _initPaload;
   late final Rpc _rpc;
   late final Controller _controller;
@@ -39,7 +43,17 @@ class Service {
   final _stdinBuffer = Uint8Buffer();
   StreamSubscription<List<int>>? _stdintSubscription;
 
-  Service();
+  Service._();
+
+  factory Service.getInstanse() {
+    _instanse ??= Service._();
+
+    return _instanse!;
+  }
+
+  Rpc get rpc => _rpc;
+  Controller get controller => _controller;
+  Logger get logger => _logger;
 
   Future<void> load<T extends Object>(
       T Function(Map<String, dynamic>) createConfig) async {
