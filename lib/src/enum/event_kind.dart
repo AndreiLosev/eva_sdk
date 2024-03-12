@@ -16,7 +16,7 @@ enum EventKind {
 
   EapiTopic toEapiTopic() => switch (this) {
         EventKind.any => EapiTopic.anyStateTopic,
-        EventKind.local => EapiTopic.logInputTopic,
+        EventKind.local => EapiTopic.localStateTopic,
         EventKind.remote => EapiTopic.remoteStateTopic,
         EventKind.remoteArchive => EapiTopic.remoteArchiveStateTopic,
       };

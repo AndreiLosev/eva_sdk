@@ -4,6 +4,7 @@ import 'dart:typed_data';
 
 import 'package:busrt_client/busrt_client.dart';
 import 'package:eva_sdk/src/controller.dart';
+import 'package:eva_sdk/src/debug_log.dart';
 import 'package:eva_sdk/src/dto/eva_error.dart';
 import 'package:eva_sdk/src/dto/initial_payload.dart';
 import 'package:eva_sdk/src/dto/service_info.dart';
@@ -14,10 +15,14 @@ import 'package:eva_sdk/src/enum/log_level.dart';
 import 'package:eva_sdk/src/enum/service_payload_kind.dart';
 import 'package:eva_sdk/src/enum/service_status.dart';
 import 'package:eva_sdk/src/helpers.dart';
+import 'package:eva_sdk/src/item_state.dart';
 import 'package:eva_sdk/src/log.dart';
 import 'package:eva_sdk/src/oid.dart';
 import 'package:msgpack_dart/msgpack_dart.dart';
 import 'package:typed_data/typed_data.dart';
+
+typedef SubscriptionHandler = FutureOr<void> Function(
+    ItemState payload, String topic, String sender);
 
 class _ServiceState {
   bool active = true;
@@ -29,7 +34,6 @@ class _ServiceState {
 }
 
 class Service {
-  
   static Service? _instanse;
 
   late final InitialPayload _initPaload;
@@ -38,11 +42,15 @@ class Service {
   late final ServiceInfo _serviceInfo;
   late final Logger _logger;
 
+  final _subscriptionHandlers = <String, SubscriptionHandler>{};
+
   final _serviceState = _ServiceState();
   final _stdinBuffer = Uint8Buffer();
   StreamSubscription<List<int>>? _stdintSubscription;
 
-  Service._();
+  Service._() {
+    dbg("create service");
+  }
 
   factory Service.getInstanse() {
     _instanse ??= Service._();
@@ -56,11 +64,17 @@ class Service {
 
   Future<void> load<T extends Object>(
       T Function(Map<String, dynamic>) createConfig) async {
+    dbg("start service.load()");
     if (_serviceState.loaded) {
       throw Exception("the service is already loaded");
     }
 
-    _stdintSubscription = stdin.listen((e) => _stdinBuffer.addAll(e));
+    _serviceState.loaded = true;
+
+    _stdintSubscription = stdin.listen((e) {
+      dbg({'stdin listen': e});
+      _stdinBuffer.addAll(e);
+    });
 
     var buf = await _stdinRead(1);
 
@@ -73,6 +87,7 @@ class Service {
 
     buf = await _stdinRead(dataLen);
     final Map<String, dynamic> inital = deserialize(buf);
+    dbg({'inital': inital});
     _initPaload = InitialPayload.fromMap(inital, createConfig);
     _serviceState.loaded = true;
 
@@ -88,19 +103,24 @@ class Service {
     }
 
     _stdintSubscription?.onDone(() async {
+      dbg("stdin on done");
       _stdintSubscription?.cancel();
       await markTerminating();
+      await _rpc.bus.disconnect();
     });
 
     _stdintSubscription?.onError((e) async {
+      dbg("stdin on error");
       await _logger.error(e);
       _stdintSubscription?.cancel();
       await markTerminating();
+      await _rpc.bus.disconnect();
     });
     Future.microtask(() => _handleStdin());
   }
 
   Future<void> waitCore() async {
+    dbg("wait comlite");
     final timer = Stopwatch();
     timer.stop();
     final timeout = _initPaload.timeout.startup ?? _initPaload.timeout.default1;
@@ -122,6 +142,7 @@ class Service {
   }
 
   Future<void> markTerminating() async {
+    dbg("markTerminating()");
     _serviceState.active = false;
     _serviceState.shutdownRequested = true;
 
@@ -143,18 +164,19 @@ class Service {
 
   bool isModeRTF() => _initPaload.failMode;
 
-  Future<void> init(ServiceInfo info,
-      [FutureOr<void> Function(Frame f)? onFrame]) async {
+  Future<void> init(ServiceInfo info) async {
+    dbg("init");
+    
+    if (!_serviceState.loaded) {
+      throw Exception("first you need to run Service.load()");
+    }
+
     //TODO dropPrivileges
     final bus = await _initBus();
     _logger = Logger(bus, _initPaload.core.logLevel.toLogLevel());
     _controller = Controller(bus);
     _serviceInfo = info;
-    _rpc = Rpc(bus, onCall: _handleRpcCall);
-
-    if (onFrame != null) {
-      _rpc.onFrame = onFrame;
-    }
+    _rpc = Rpc(bus, onCall: _handleRpcCall, onFrane: _onFrameHandler);
 
     _registerSignals();
     await _markReady();
@@ -167,9 +189,15 @@ class Service {
     });
   }
 
-  Future<void> subscribeOIDs(Iterable<Oid> items, EventKind kind) async {
+  Future<void> subscribeOIDs(
+      Iterable<(Oid, SubscriptionHandler)> items, EventKind kind) async {
     final sfx = kind.toEapiTopic();
-    final topics = items.map((e) => sfx.resolve(e.asPath())).toList();
+
+    for (var (oid, fn) in items) {
+      _subscriptionHandlers[oid.asPath()] = fn;
+    }
+
+    final topics = items.map((e) => sfx.resolve(e.$1.asPath())).toList();
     await _rpc.bus.subscribe(topics);
   }
 
@@ -190,8 +218,14 @@ class Service {
   }
 
   void _registerSignals() {
-    ProcessSignal.sigint.watch().listen((_) => _serviceState.active = false);
-    ProcessSignal.sigterm.watch().listen((_) => _serviceState.active = false);
+    ProcessSignal.sigint.watch().listen((_) {
+      _serviceState.active = false;
+      dbg("signal: sigint");
+    });
+    ProcessSignal.sigterm.watch().listen((_) {
+      _serviceState.active = false;
+      dbg("signal: sigterm");
+    });
   }
 
   Future<Bus> _initBus() async {
@@ -223,6 +257,7 @@ class Service {
   Future<void> _handleStdin() async {
     while (_serviceState.active) {
       final buf = await _stdinRead(1);
+      dbg({'_handleStdin': buf});
       if (!buf[0].toServicePayloadKind().isPing()) await markTerminating();
     }
   }
@@ -239,7 +274,7 @@ class Service {
     if (e.method == null) {
       noRpcMethod(e.method);
     }
-
+    dbg("rpc call");
     return switch (e.method!) {
       "test" => serialize({'status': _serviceState.active}),
       "info" => serialize(_serviceInfo.toMap()),
@@ -255,10 +290,51 @@ class Service {
     try {
       final ServiceMethod method =
           _serviceInfo.methods.firstWhere((i) => i.name == methodName);
-      return await method.fn(e);
+
+      final params = deserialize(e.payload) as Map<String, dynamic>?;
+      if (params == null) {
+        return await method.fn({});
+      }
+      final prepParams = <String, dynamic>{};
+      final reqParam = method.getRequared();
+      final optParam =
+          method.getOptional().where((e) => params.keys.contains(e));
+      for (var pName in [...reqParam, ...optParam]) {
+        prepParams[pName] = params[pName];
+      }
+
+      return await method.fn(prepParams);
     } on StateError {
       noRpcMethod(methodName);
       return null;
+    }
+  }
+
+  FutureOr<void> _onFrameHandler(Frame f) async {
+    if (f.topic == null) {
+      throw EvaError(EvaErrorKind.busData, "Frame topic is null");
+    }
+
+    final payload = ItemState.fromMap(f.topic!, deserialize(f.payload));
+
+    if (_subscriptionHandlers[f.topic] != null) {
+      return await _subscriptionHandlers[f.topic]!(
+          payload, f.topic!, f.primarySender!);
+    }
+
+    final regexTopics = _subscriptionHandlers.keys
+        .where((e) => e.endsWith("#") || e.contains("+"))
+        .map((e) => (
+              e.endsWith("#")
+                  ? e.replaceFirst('#', ".*")
+                  : e.replaceAll('+', '.+'),
+              e
+            ))
+        .where((e) => RegExp(e.$1).hasMatch(f.topic!))
+        .map((e) => e.$2);
+
+    for (var topic in regexTopics) {
+      _subscriptionHandlers[topic]!(payload, topic, f.primarySender!);
     }
   }
 }

@@ -36,4 +36,8 @@ enum EapiTopic {
       actionStatus => 'ACT/$topic',
     };
   }
+
+  bool hasMatch(String fullPath) => fullPath.startsWith(resolve());
+  
+  String topic(String fullPath) => fullPath.replaceFirst(resolve(), ''); 
 }

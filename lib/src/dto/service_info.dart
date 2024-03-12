@@ -23,7 +23,7 @@ class ServiceMethodParam {
 class ServiceMethod {
   final String name;
   final String description;
-  final FutureOr<Uint8List?> Function(RpcEvent) fn;
+  final FutureOr<Uint8List?> Function(Map<String, dynamic>) fn;
   final List<ServiceMethodParam> params = [];
 
   ServiceMethod(this.name, this.fn, [this.description = ""]);
@@ -33,6 +33,12 @@ class ServiceMethod {
 
   void optional(String name, String type, [String description = ""]) =>
       params.add(ServiceMethodParam(name, type, false, description));
+
+  Iterable<String> getRequared() =>
+      params.where((e) => e.required).map((e) => e.name);
+
+  Iterable<String> getOptional() =>
+      params.where((e) => !e.required).map((e) => e.name);
 
   Map<String, dynamic> toMap() => {
         'name': name,
