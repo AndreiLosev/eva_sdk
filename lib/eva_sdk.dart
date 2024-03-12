@@ -9,9 +9,11 @@ export 'package:eva_sdk/src/enum/eapi_topic.dart';
 export 'package:eva_sdk/src/enum/action_status.dart';
 
 
+
 export 'package:eva_sdk/src/oid.dart';
 export 'package:eva_sdk/src/helpers.dart';
 
+export 'package:eva_sdk/src/item_state.dart';
 export 'package:eva_sdk/src/log.dart';
 export 'package:eva_sdk/src/controller.dart';
 export 'package:eva_sdk/src/service.dart';

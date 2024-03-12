@@ -26,54 +26,21 @@ class ItemState {
     return ItemState(oid, map['status'], map['value'], t, ieid);
   }
 
-  void _checkValueType<T>(T _) {
+  ItemStateTyped<T> to<T extends Object>() {
     if (value is! T) {
       throw EvaError(EvaErrorKind.busData,
-          "value type ${value.runtimeType}, but value must be $T");
+          "value type ${value.runtimeType}, but expected $T");
     }
+
+    return ItemStateTyped<T>(oid, status, value, t, ieid);
   }
-
-  ItemStateBool asBool() => ItemStateBool(oid, status, value, t, ieid);
-
-  ItemStateInt asInt() => ItemStateInt(oid, status, value, t, ieid);
-
-  ItemStateDouble asDouble() => ItemStateDouble(oid, status, value, t, ieid);
-
-  ItemStateString asString() => ItemStateString(oid, status, value, t, ieid);
 }
 
-class ItemStateBool extends ItemState {
-  ItemStateBool(super.oid, super.status, super.value, super.t, super.ieid) {
-    _checkValueType(true);
-  }
+class ItemStateTyped<T extends Object> extends ItemState {
+  ItemStateTyped(super.oid, super.status, super.value, super.t, super.ieid);
 
   @override
-  bool get value => super.value as bool;
-}
-
-class ItemStateInt extends ItemState {
-  ItemStateInt(super.oid, super.status, super.value, super.t, super.ieid) {
-    _checkValueType(1);
+  T get value {
+    return super.value as T;
   }
-
-  @override
-  int get value => super.value as int;
-}
-
-class ItemStateDouble extends ItemState {
-  ItemStateDouble(super.oid, super.status, super.value, super.t, super.ieid) {
-    _checkValueType(1.1);
-  }
-
-  @override
-  double get value => super.value as double;
-}
-
-class ItemStateString extends ItemState {
-  ItemStateString(super.oid, super.status, super.value, super.t, super.ieid) {
-    _checkValueType("w");
-  }
-
-  @override
-  String get value => super.value as String;
 }
