@@ -288,6 +288,7 @@ class Service {
 
   FutureOr<Uint8List?> _rpcCallWrapper(String methodName, RpcEvent e) async {
     try {
+      dbg(["_rpcCallWrapper", {'RpcEventKind': e.kind.value, "payload": e.payload, "method":  e.method}]);
       final ServiceMethod method =
           _serviceInfo.methods.firstWhere((i) => i.name == methodName);
 
@@ -311,6 +312,7 @@ class Service {
   }
 
   FutureOr<void> _onFrameHandler(Frame f) async {
+    dbg(["_rpcCallWrapper", {'topic': f.topic, "payload": f.payload, "sender":  f.sender}]);
     if (f.topic == null) {
       throw EvaError(EvaErrorKind.busData, "Frame topic is null");
     }
