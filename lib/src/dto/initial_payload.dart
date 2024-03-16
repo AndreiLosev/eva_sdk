@@ -1,9 +1,5 @@
-abstract interface class Config {
-  Map<String, dynamic> toMap();
-}
 
-
-class InitialPayload<T extends Config> {
+class InitialPayload {
   final int version;
   final String systemName;
   final String id;
@@ -13,7 +9,7 @@ class InitialPayload<T extends Config> {
   final InitialTimeoutConfig timeout;
   final InitialCoreInfo core;
   final InitialBusConfig bus;
-  final T config;
+  final Map<String, dynamic> config;
   final int workers;
   final String? user;
   final bool reactToFail;
@@ -40,8 +36,7 @@ class InitialPayload<T extends Config> {
     this.callTracing,
   );
 
-  InitialPayload.fromMap(
-      Map<String, dynamic> map, T Function(Map<String, dynamic>) createConfig)
+  InitialPayload.fromMap(Map<String, dynamic> map)
       : version = map['version'],
         systemName = map['system_name'],
         id = map['id'],
@@ -51,7 +46,7 @@ class InitialPayload<T extends Config> {
         timeout = InitialTimeoutConfig.fromMap(map['timeout']),
         core = InitialCoreInfo.fromMap(map['core']),
         bus = InitialBusConfig.fromMap(map['bus']),
-        config = createConfig(map['config']),
+        config = map['config'],
         workers = map['workers'],
         reactToFail = map['react_to_fail'],
         fips = map['fips'],
@@ -70,7 +65,7 @@ class InitialPayload<T extends Config> {
       'timeout': timeout.toMap(),
       'core': core.toMap(),
       'bus': bus.toMap(),
-      'config': config.toMap(),
+      'config': config,
       'workers': workers,
       'react_to_fail': reactToFail,
       'fips': fips,

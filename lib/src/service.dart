@@ -43,6 +43,7 @@ class Service {
   late final Logger _logger;
 
   final _subscriptionHandlers = <String, SubscriptionHandler>{};
+  final _rawSubscriptionHandlers = <String, FutureOr<void> Function(Frame)>{};
 
   final _serviceState = _ServiceState();
   final _stdinBuffer = Uint8Buffer();
@@ -54,7 +55,6 @@ class Service {
 
   factory Service.getInstanse() {
     _instanse ??= Service._();
-
     return _instanse!;
   }
 
@@ -62,8 +62,7 @@ class Service {
   Controller get controller => _controller;
   Logger get logger => _logger;
 
-  Future<void> load<T extends Object>(
-      T Function(Map<String, dynamic>) createConfig) async {
+  Future<void> load() async {
     dbg("start service.load()");
     if (_serviceState.loaded) {
       throw Exception("the service is already loaded");
@@ -88,7 +87,7 @@ class Service {
     buf = await _stdinRead(dataLen);
     final Map<String, dynamic> inital = deserialize(buf);
     dbg({'inital': inital});
-    _initPaload = InitialPayload.fromMap(inital, createConfig);
+    _initPaload = InitialPayload.fromMap(inital);
     _serviceState.loaded = true;
 
     //TODO set enviroment
@@ -118,6 +117,8 @@ class Service {
     });
     Future.microtask(() => _handleStdin());
   }
+
+  // Future<void> debugLoad(String path) async {}
 
   Future<void> waitCore() async {
     dbg("wait comlite");
@@ -158,7 +159,7 @@ class Service {
     }
   }
 
-  T getConfig<T extends Object>() => _initPaload.config as T;
+  Map<String, dynamic> getConfig() => _initPaload.config;
 
   bool isModeNoraml() => !_initPaload.failMode;
 
@@ -166,7 +167,7 @@ class Service {
 
   Future<void> init(ServiceInfo info) async {
     dbg("init");
-    
+
     if (!_serviceState.loaded) {
       throw Exception("first you need to run Service.load()");
     }
@@ -198,6 +199,16 @@ class Service {
     }
 
     final topics = items.map((e) => sfx.resolve(e.$1.asPath())).toList();
+    await _rpc.bus.subscribe(topics);
+  }
+
+  Future<void> subscribeRaw(
+      Iterable<(String, SubscriptionHandler)> items) async {
+    for (var (topic, fn) in items) {
+      _subscriptionHandlers[topic] = fn;
+    }
+
+    final topics = items.map((e) => e.$1).toList();
     await _rpc.bus.subscribe(topics);
   }
 
@@ -288,7 +299,10 @@ class Service {
 
   FutureOr<Uint8List?> _rpcCallWrapper(String methodName, RpcEvent e) async {
     try {
-      dbg(["_rpcCallWrapper", {'RpcEventKind': e.kind.value, "payload": e.payload, "method":  e.method}]);
+      dbg([
+        "_rpcCallWrapper",
+        {'RpcEventKind': e.kind.value, "payload": e.payload, "method": e.method}
+      ]);
       final ServiceMethod method =
           _serviceInfo.methods.firstWhere((i) => i.name == methodName);
 
@@ -311,20 +325,31 @@ class Service {
     }
   }
 
-  FutureOr<void> _onFrameHandler(Frame f) async {
-    dbg(["_rpcCallWrapper", {'topic': f.topic, "payload": f.payload, "sender":  f.sender}]);
+  FutureOr<void> _onFrameHandler(Frame f) {
+    dbg([
+      "_rpcCallWrapper",
+      {'topic': f.topic, "payload": f.payload, "sender": f.sender}
+    ]);
     if (f.topic == null) {
       throw EvaError(EvaErrorKind.busData, "Frame topic is null");
     }
 
-    final payload = ItemState.fromMap(f.topic!, deserialize(f.payload));
+    try {
+      final fn = _findTopicHandler(f.topic!, _subscriptionHandlers);
+      final payload = ItemState.fromMap(f.topic!, deserialize(f.payload));
+      return fn(payload, f.topic!, f.primarySender!);
+    } on StateError {
+      final fn = _findTopicHandler(f.topic!, _rawSubscriptionHandlers);
+      return fn(f);
+    }
+  }
 
-    if (_subscriptionHandlers[f.topic] != null) {
-      return await _subscriptionHandlers[f.topic]!(
-          payload, f.topic!, f.primarySender!);
+  T _findTopicHandler<T extends Function>(String topic, Map<String, T> map) {
+    if (map[topic] is Function) {
+      return map[topic]!;
     }
 
-    final regexTopics = _subscriptionHandlers.keys
+    final regexTopics = map.keys
         .where((e) => e.endsWith("#") || e.contains("+"))
         .map((e) => (
               e.endsWith("#")
@@ -332,11 +357,10 @@ class Service {
                   : e.replaceAll('+', '.+'),
               e
             ))
-        .where((e) => RegExp(e.$1).hasMatch(f.topic!))
-        .map((e) => e.$2);
-
-    for (var topic in regexTopics) {
-      _subscriptionHandlers[topic]!(payload, topic, f.primarySender!);
-    }
+        .where((e) => RegExp(e.$1).hasMatch(topic))
+        .map((e) => e.$2)
+        .first;
+    
+    return map[regexTopics]!;
   }
 }
