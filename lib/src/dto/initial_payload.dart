@@ -1,4 +1,9 @@
-class InitialPayload<T extends Object> {
+abstract interface class Config {
+  Map<String, dynamic> toMap();
+}
+
+
+class InitialPayload<T extends Config> {
   final int version;
   final String systemName;
   final String id;
@@ -42,7 +47,7 @@ class InitialPayload<T extends Object> {
         id = map['id'],
         command = map['command'],
         prepareCommand = map['prepare_command'],
-        dataPath = map['dataPath'],
+        dataPath = map['data_path'],
         timeout = InitialTimeoutConfig.fromMap(map['timeout']),
         core = InitialCoreInfo.fromMap(map['core']),
         bus = InitialBusConfig.fromMap(map['bus']),
@@ -53,6 +58,27 @@ class InitialPayload<T extends Object> {
         failMode = map['fail_mode'],
         user = map['user'],
         callTracing = map['call_tracing'];
+
+  Map<String, dynamic> toMap() {
+    return {
+      'version': version,
+      'system_name': systemName,
+      'id': id,
+      'command': command,
+      'prepare_command': prepareCommand,
+      'data_path': dataPath,
+      'timeout': timeout.toMap(),
+      'core': core.toMap(),
+      'bus': bus.toMap(),
+      'config': config.toMap(),
+      'workers': workers,
+      'react_to_fail': reactToFail,
+      'fips': fips,
+      'fail_mode': failMode,
+      'user': user,
+      'call_tracing': callTracing,
+    };
+  }
 }
 
 class InitialBusConfig {
@@ -75,10 +101,21 @@ class InitialBusConfig {
   InitialBusConfig.fromMap(Map<String, dynamic> map)
       : type = map['type'],
         path = map['path'],
-        timeout = map['timeout'] is int ? Duration(seconds: map['timeout']) : null,
+        timeout = _fromDoubleSeconds(map['timeout'] as double?),
         bufSize = map['buf_size'],
         bufTtl = map['buf_ttl'],
         queueSize = map['queue_size'];
+
+  Map<String, dynamic> toMap() {
+    return {
+      'type': type,
+      'path': path,
+      'timeout': timeout != null ? timeout!.inMilliseconds / 1000 : null,
+      'buf_size': bufSize,
+      'buf_ttl': bufTtl,
+      'queue_size': queueSize,
+    };
+  }
 }
 
 class InitialCoreInfo {
@@ -105,6 +142,17 @@ class InitialCoreInfo {
         path = map['path'],
         logLevel = map['log_level'],
         active = map['active'];
+
+  Map<String, dynamic> toMap() {
+    return {
+      'build': build,
+      'version': version,
+      'eapi_version': eapiVersion,
+      'path': path,
+      'log_level': logLevel,
+      'active': active,
+    };
+  }
 }
 
 class InitialTimeoutConfig {
@@ -115,9 +163,18 @@ class InitialTimeoutConfig {
   InitialTimeoutConfig.fromMap(Map<String, Object?> map)
       : startup = _fromDoubleSeconds(map['startup'] as double?),
         shutdown = _fromDoubleSeconds(map['shutdown'] as double?),
-        default1 = _fromDoubleSeconds(map['default'] as double)!;
+        default1 = _fromDoubleSeconds((map['default'] as double?) ?? 10)!;
 
-  static Duration? _fromDoubleSeconds(double? sec) {
+  Map<String, dynamic> toMap() {
+    return {
+      'startup': startup != null ? startup!.inMilliseconds / 1000 : null,
+      'shutdown': shutdown != null ? shutdown!.inMilliseconds / 1000 : null,
+      'default': default1.inMilliseconds,
+    };
+  }
+}
+
+Duration? _fromDoubleSeconds(double? sec) {
     if (sec == null) {
       return null;
     }
@@ -126,4 +183,3 @@ class InitialTimeoutConfig {
 
     return Duration(seconds: seconds, milliseconds: miliseconds);
   }
-}
