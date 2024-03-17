@@ -17,7 +17,15 @@ class DebugLog {
     if (_path == null) {
       return;
     }
-    File(_path).writeAsStringSync(mess.toString(), mode: FileMode.append);
+  
+    if (_path == 'console') {
+      print(mess);
+    }
+
+    File(_path).writeAsStringSync(
+        "${mess.toString()} ${Platform.lineTerminator}",
+        mode: FileMode.append,
+      );
   }
 }
 
@@ -27,6 +35,6 @@ void dbgInit(String path) {
 
 void dbg(Object mess) {
   try {
-    DebugLog.getInstanse().log("${mess.toString()} ${Platform.lineTerminator}");
+    DebugLog.getInstanse().log(mess);
   } catch (_) {}
 }

@@ -20,6 +20,7 @@ import 'package:eva_sdk/src/log.dart';
 import 'package:eva_sdk/src/oid.dart';
 import 'package:msgpack_dart/msgpack_dart.dart';
 import 'package:typed_data/typed_data.dart';
+import 'package:yaml/yaml.dart';
 
 typedef SubscriptionHandler = FutureOr<void> Function(
     ItemState payload, String topic, String sender);
@@ -68,8 +69,6 @@ class Service {
       throw Exception("the service is already loaded");
     }
 
-    _serviceState.loaded = true;
-
     _stdintSubscription = stdin.listen((e) {
       dbg({'stdin listen': e});
       _stdinBuffer.addAll(e);
@@ -88,37 +87,20 @@ class Service {
     final Map<String, dynamic> inital = deserialize(buf);
     dbg({'inital': inital});
     _initPaload = InitialPayload.fromMap(inital);
-    _serviceState.loaded = true;
 
-    //TODO set enviroment
-
-    if (_initPaload.failMode && !_initPaload.reactToFail) {
-      throw Exception(
-          "the service is started in react-to-fail mode, but rtf is not supported by the service");
-    }
-
-    if (_initPaload.prepareCommand != null) {
-      await Process.run(_initPaload.prepareCommand!, const []);
-    }
-
-    _stdintSubscription?.onDone(() async {
-      dbg("stdin on done");
-      _stdintSubscription?.cancel();
-      await markTerminating();
-      await _rpc.bus.disconnect();
-    });
-
-    _stdintSubscription?.onError((e) async {
-      dbg("stdin on error");
-      await _logger.error(e);
-      _stdintSubscription?.cancel();
-      await markTerminating();
-      await _rpc.bus.disconnect();
-    });
-    Future.microtask(() => _handleStdin());
+    await _minorLoadingAction();
   }
 
-  // Future<void> debugLoad(String path) async {}
+  Future<void> debugLoad(String path) async {
+    dbg("start service.load()");
+    if (_serviceState.loaded) {
+      throw Exception("the service is already loaded");
+    }
+
+    final yaml = await File(path).readAsString();
+    _initPaload = InitialPayload.fromMap(loadYaml(yaml));
+    await _minorLoadingAction();
+  }
 
   Future<void> waitCore() async {
     dbg("wait comlite");
@@ -256,7 +238,7 @@ class Service {
       if (_stdintSubscription == null) {
         throw Exception("_stdintSubscription = null");
       }
-      await Future.delayed(Duration.zero);
+      await Future.delayed(const Duration(milliseconds: 100));
     }
 
     final buf = Uint8List.fromList(_stdinBuffer.take(len).toList());
@@ -360,7 +342,38 @@ class Service {
         .where((e) => RegExp(e.$1).hasMatch(topic))
         .map((e) => e.$2)
         .first;
-    
+
     return map[regexTopics]!;
+  }
+
+  Future<void> _minorLoadingAction() async {
+    _serviceState.loaded = true;
+
+    //TODO set enviroment
+
+    if (_initPaload.failMode && !_initPaload.reactToFail) {
+      throw Exception(
+          "the service is started in react-to-fail mode, but rtf is not supported by the service");
+    }
+
+    if (_initPaload.prepareCommand != null) {
+      await Process.run(_initPaload.prepareCommand!, const []);
+    }
+
+    _stdintSubscription?.onDone(() async {
+      dbg("stdin on done");
+      _stdintSubscription?.cancel();
+      await markTerminating();
+      await _rpc.bus.disconnect();
+    });
+
+    _stdintSubscription?.onError((e) async {
+      dbg("stdin on error");
+      await _logger.error(e);
+      _stdintSubscription?.cancel();
+      await markTerminating();
+      await _rpc.bus.disconnect();
+    });
+    Future.microtask(() => _handleStdin());
   }
 }
