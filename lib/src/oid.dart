@@ -14,9 +14,9 @@ class Oid {
     fullId = id.substring(pos + 1);
   }
 
-  String asString() => "$kind:fullId";
+  String asString() => "$kind:$fullId";
 
-  String asPath() => "$kind/fullId";
+  String asPath() => "$kind/$fullId";
 
   bool equal(Oid other) =>
       kind == other.kind && fullId == other.fullId;

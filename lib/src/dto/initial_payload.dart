@@ -5,7 +5,7 @@ class InitialPayload {
   final String id;
   final String command;
   final String? prepareCommand;
-  final String dataPath;
+  final String? dataPath;
   final InitialTimeoutConfig timeout;
   final InitialCoreInfo core;
   final InitialBusConfig bus;
@@ -49,10 +49,10 @@ class InitialPayload {
         config = map['config'],
         workers = map['workers'],
         reactToFail = map['react_to_fail'],
-        fips = map['fips'],
-        failMode = map['fail_mode'],
+        fips = map['fips'] ?? false,
+        failMode = map['react_to_fail'],
         user = map['user'],
-        callTracing = map['call_tracing'];
+        callTracing = map['call_tracing'] ?? false;
 
   Map<String, dynamic> toMap() {
     return {
@@ -94,12 +94,12 @@ class InitialBusConfig {
   );
 
   InitialBusConfig.fromMap(Map<String, dynamic> map)
-      : type = map['type'],
+      : type = map['type'] ?? 'native',
         path = map['path'],
         timeout = _fromDoubleSeconds(map['timeout'] as double?),
-        bufSize = map['buf_size'],
-        bufTtl = map['buf_ttl'],
-        queueSize = map['queue_size'];
+        bufSize = map['buf_size'] ?? 0xffffffff,
+        bufTtl = map['buf_ttl'] ?? 0xffffffff,
+        queueSize = map['queue_size'] ?? 0xffffffff;
 
   Map<String, dynamic> toMap() {
     return {
@@ -151,14 +151,14 @@ class InitialCoreInfo {
 }
 
 class InitialTimeoutConfig {
-  final Duration? startup;
+   final Duration? startup;
   final Duration? shutdown;
   final Duration default1;
 
-  InitialTimeoutConfig.fromMap(Map<String, Object?> map)
-      : startup = _fromDoubleSeconds(map['startup'] as double?),
-        shutdown = _fromDoubleSeconds(map['shutdown'] as double?),
-        default1 = _fromDoubleSeconds((map['default'] as double?) ?? 10)!;
+  InitialTimeoutConfig.fromMap(Map<String, Object?>? map)
+      : startup = _fromDoubleSeconds(map?['startup'] as double?),
+        shutdown = _fromDoubleSeconds(map?['shutdown'] as double?),
+        default1 = _fromDoubleSeconds((map?['default'] as double?) ?? 5)!;
 
   Map<String, dynamic> toMap() {
     return {

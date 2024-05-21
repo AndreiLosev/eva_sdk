@@ -34,6 +34,14 @@ class ItemState {
 
     return ItemStateTyped<T>(oid, status, value, t, ieid);
   }
+
+  Map<String, dynamic> toMap() => {
+    'oid': oid.asString(),
+    'status': status,
+    'value': value,
+    't': t,
+    'ieid': ieid,
+  };
 }
 
 class ItemStateTyped<T extends Object> extends ItemState {

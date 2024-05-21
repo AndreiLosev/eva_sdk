@@ -20,6 +20,7 @@ class DebugLog {
   
     if (_path == 'console') {
       print(mess);
+      return;
     }
 
     File(_path).writeAsStringSync(

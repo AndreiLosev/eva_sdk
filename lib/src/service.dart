@@ -49,6 +49,7 @@ class Service {
   final _serviceState = _ServiceState();
   final _stdinBuffer = Uint8Buffer();
   StreamSubscription<List<int>>? _stdintSubscription;
+  final _processSinals = <StreamSubscription<ProcessSignal>>[];
 
   Service._() {
     dbg("create service");
@@ -84,7 +85,7 @@ class Service {
     final dataLen = buf.buffer.asUint32List().first;
 
     buf = await _stdinRead(dataLen);
-    final Map<String, dynamic> inital = deserialize(buf);
+    final Map<String, dynamic> inital = (deserialize(buf) as Map).cast();
     dbg({'inital': inital});
     _initPaload = InitialPayload.fromMap(inital);
 
@@ -96,9 +97,33 @@ class Service {
     if (_serviceState.loaded) {
       throw Exception("the service is already loaded");
     }
-
     final yaml = await File(path).readAsString();
-    _initPaload = InitialPayload.fromMap(loadYaml(yaml));
+    Map<String, dynamic> config = (loadYaml(yaml) as Map).cast();
+    final Map<String, dynamic> setConfig = {
+      'version': 1,
+      'system_name': 'test-1',
+      'id': 'losev.test.service',
+      'core': {
+        'build': 0x55,
+        'version': '123',
+        'eapi_version': 123,
+        'path': "/ewq/eqw",
+        'log_level': 0,
+        'active': true,
+      },
+    };
+    for (var item in config.entries) {
+      setConfig[item.key] = item.value is YamlNode
+          ? (item.value as Map).cast<String, dynamic>()
+          : item.value;
+    }
+    _initPaload = InitialPayload.fromMap(setConfig);
+
+    _stdintSubscription = stdin.listen((e) {
+      dbg({'stdin listen': e});
+      _stdinBuffer.addAll(e);
+    });
+
     await _minorLoadingAction();
   }
 
@@ -169,6 +194,16 @@ class Service {
         await Future.delayed(const Duration(milliseconds: 100));
       }
       await markTerminating();
+      await _stdintSubscription?.cancel();
+      _stdintSubscription = null;
+      dbg('_stdintSubscription?.cancel()');
+      await _rpc.bus.disconnect();
+      dbg('_rpc.bus.disconnect()');
+
+      for (var siganl in _processSinals) {
+        await siganl.cancel();
+        dbg(['siganl.cancel()', siganl.runtimeType]);
+      }
     });
   }
 
@@ -177,11 +212,12 @@ class Service {
     final sfx = kind.toEapiTopic();
 
     for (var (oid, fn) in items) {
-      _subscriptionHandlers[oid.asPath()] = fn;
+      _subscriptionHandlers[sfx.resolve(oid.asPath())] = fn;
     }
 
     final topics = items.map((e) => sfx.resolve(e.$1.asPath())).toList();
     await _rpc.bus.subscribe(topics);
+    dbg(['subscribe topicsl', topics]);
   }
 
   Future<void> subscribeRaw(
@@ -211,14 +247,19 @@ class Service {
   }
 
   void _registerSignals() {
-    ProcessSignal.sigint.watch().listen((_) {
-      _serviceState.active = false;
-      dbg("signal: sigint");
-    });
-    ProcessSignal.sigterm.watch().listen((_) {
-      _serviceState.active = false;
-      dbg("signal: sigterm");
-    });
+    _processSinals.add(
+      ProcessSignal.sigint.watch().listen((_) {
+        _serviceState.active = false;
+        dbg("signal: sigint");
+      }),
+    );
+
+    _processSinals.add(
+      ProcessSignal.sigterm.watch().listen((_) {
+        _serviceState.active = false;
+        dbg("signal: sigterm");
+      }),
+    );
   }
 
   Future<Bus> _initBus() async {
@@ -236,8 +277,9 @@ class Service {
   Future<Uint8List> _stdinRead(int len) async {
     while (_stdinBuffer.length < len) {
       if (_stdintSubscription == null) {
-        throw Exception("_stdintSubscription = null");
+        return Uint8List(1);
       }
+
       await Future.delayed(const Duration(milliseconds: 100));
     }
 
@@ -309,7 +351,7 @@ class Service {
 
   FutureOr<void> _onFrameHandler(Frame f) {
     dbg([
-      "_rpcCallWrapper",
+      "_onFrameHandler",
       {'topic': f.topic, "payload": f.payload, "sender": f.sender}
     ]);
     if (f.topic == null) {
@@ -318,7 +360,8 @@ class Service {
 
     try {
       final fn = _findTopicHandler(f.topic!, _subscriptionHandlers);
-      final payload = ItemState.fromMap(f.topic!, deserialize(f.payload));
+      final payload =
+          ItemState.fromMap(f.topic!, (deserialize(f.payload) as Map).cast());
       return fn(payload, f.topic!, f.primarySender!);
     } on StateError {
       final fn = _findTopicHandler(f.topic!, _rawSubscriptionHandlers);
@@ -330,6 +373,8 @@ class Service {
     if (map[topic] is Function) {
       return map[topic]!;
     }
+
+    dbg(['_findTopicHandler', map.keys, topic]);
 
     final regexTopics = map.keys
         .where((e) => e.endsWith("#") || e.contains("+"))
@@ -374,6 +419,7 @@ class Service {
       await markTerminating();
       await _rpc.bus.disconnect();
     });
+
     Future.microtask(() => _handleStdin());
   }
 }
