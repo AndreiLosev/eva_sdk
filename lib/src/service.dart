@@ -63,6 +63,7 @@ class Service {
   Rpc get rpc => _rpc;
   Controller get controller => _controller;
   Logger get logger => _logger;
+  InitialPayload get config => _initPaload;
 
   Future<void> load() async {
     dbg("start service.load()");
