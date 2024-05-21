@@ -107,7 +107,7 @@ class Service {
       'core': {
         'build': 0x55,
         'version': '123',
-        'eapi_version': 123,
+        'eapi_verion': 123,
         'path': "/ewq/eqw",
         'log_level': 0,
         'active': true,
@@ -167,7 +167,7 @@ class Service {
     }
   }
 
-  Map<String, dynamic> getConfig() => _initPaload.config;
+  Map<dynamic, dynamic> getConfig() => _initPaload.config;
 
   bool isModeNoraml() => !_initPaload.failMode;
 
@@ -222,9 +222,9 @@ class Service {
   }
 
   Future<void> subscribeRaw(
-      Iterable<(String, SubscriptionHandler)> items) async {
+      Iterable<(String, FutureOr<void> Function(Frame))> items) async {
     for (var (topic, fn) in items) {
-      _subscriptionHandlers[topic] = fn;
+      _rawSubscriptionHandlers[topic] = fn;
     }
 
     final topics = items.map((e) => e.$1).toList();

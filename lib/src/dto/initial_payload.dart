@@ -9,7 +9,7 @@ class InitialPayload {
   final InitialTimeoutConfig timeout;
   final InitialCoreInfo core;
   final InitialBusConfig bus;
-  final Map<String, dynamic> config;
+  final Map<dynamic, dynamic> config;
   final int workers;
   final String? user;
   final bool reactToFail;
@@ -36,7 +36,7 @@ class InitialPayload {
     this.callTracing,
   );
 
-  InitialPayload.fromMap(Map<String, dynamic> map)
+  InitialPayload.fromMap(Map<dynamic, dynamic> map)
       : version = map['version'],
         systemName = map['system_name'],
         id = map['id'],
@@ -93,7 +93,7 @@ class InitialBusConfig {
     this.queueSize,
   );
 
-  InitialBusConfig.fromMap(Map<String, dynamic> map)
+  InitialBusConfig.fromMap(Map<dynamic, dynamic> map)
       : type = map['type'] ?? 'native',
         path = map['path'],
         timeout = _fromDoubleSeconds(map['timeout'] as double?),
@@ -130,10 +130,10 @@ class InitialCoreInfo {
     this.active,
   );
 
-  InitialCoreInfo.fromMap(Map<String, dynamic> map)
+  InitialCoreInfo.fromMap(Map<dynamic, dynamic> map)
       : build = map['build'],
         version = map['version'],
-        eapiVersion = map['eapi_version'],
+        eapiVersion = map['eapi_verion'],
         path = map['path'],
         logLevel = map['log_level'],
         active = map['active'];
@@ -155,7 +155,7 @@ class InitialTimeoutConfig {
   final Duration? shutdown;
   final Duration default1;
 
-  InitialTimeoutConfig.fromMap(Map<String, Object?>? map)
+  InitialTimeoutConfig.fromMap(Map<dynamic, Object?>? map)
       : startup = _fromDoubleSeconds(map?['startup'] as double?),
         shutdown = _fromDoubleSeconds(map?['shutdown'] as double?),
         default1 = _fromDoubleSeconds((map?['default'] as double?) ?? 5)!;
