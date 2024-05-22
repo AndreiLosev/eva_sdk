@@ -138,7 +138,7 @@ class Service {
       try {
         final req = await _rpc.call('eva.core', 'test');
         final result = await req.waitCompleted();
-        print(result);       
+        print(result);
         if (deserialize(result!.payload)['active'] == true) {
           return;
         }
@@ -189,23 +189,23 @@ class Service {
 
     _registerSignals();
     await _markReady();
+  }
 
-    Timer(Duration.zero, () async {
-      while (_serviceState.active) {
-        await Future.delayed(const Duration(milliseconds: 100));
-      }
-      await markTerminating();
-      await _stdintSubscription?.cancel();
-      _stdintSubscription = null;
-      dbg('_stdintSubscription?.cancel()');
-      await _rpc.bus.disconnect();
-      dbg('_rpc.bus.disconnect()');
+  Future<void> block() async {
+    while (_serviceState.active) {
+      await Future.delayed(const Duration(milliseconds: 100));
+    }
+    await markTerminating();
+    await _stdintSubscription?.cancel();
+    _stdintSubscription = null;
+    dbg('_stdintSubscription?.cancel()');
+    await _rpc.bus.disconnect();
+    dbg('_rpc.bus.disconnect()');
 
-      for (var siganl in _processSinals) {
-        await siganl.cancel();
-        dbg(['siganl.cancel()', siganl.runtimeType]);
-      }
-    });
+    for (var siganl in _processSinals) {
+      await siganl.cancel();
+      dbg(['siganl.cancel()', siganl.runtimeType]);
+    }
   }
 
   Future<void> subscribeOIDs(
