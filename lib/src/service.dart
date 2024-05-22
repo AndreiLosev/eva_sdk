@@ -131,14 +131,14 @@ class Service {
   Future<void> waitCore() async {
     dbg("wait comlite");
     final timer = Stopwatch();
-    timer.stop();
+    timer.start();
     final timeout = _initPaload.timeout.startup ?? _initPaload.timeout.default1;
 
     while (_serviceState.active) {
       try {
         final req = await _rpc.call('eva.core', 'test');
         final result = await req.waitCompleted();
-
+        print(result);       
         if (deserialize(result!.payload)['active'] == true) {
           return;
         }
