@@ -1,8 +1,6 @@
 import 'dart:async';
 import 'dart:typed_data';
 
-import 'package:busrt_client/busrt_client.dart';
-
 class ServiceMethodParam {
   final String name;
   final String type;
