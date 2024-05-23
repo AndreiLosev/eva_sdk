@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:typed_data';
 
 class ServiceMethodParam {
   final String name;
@@ -21,7 +20,7 @@ class ServiceMethodParam {
 class ServiceMethod {
   final String name;
   final String description;
-  final FutureOr<Uint8List?> Function(Map<String, dynamic>) fn;
+  final FutureOr<Map<String, dynamic>?> Function(Map<String, dynamic>) fn;
   final List<ServiceMethodParam> params = [];
 
   ServiceMethod(this.name, this.fn, [this.description = ""]);

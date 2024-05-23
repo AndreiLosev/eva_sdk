@@ -333,7 +333,8 @@ class Service {
 
       final params = deserialize(e.payload) as Map<String, dynamic>?;
       if (params == null) {
-        return await method.fn({});
+        final result = await method.fn({});
+        return result == null ? null : serialize(result);
       }
       final prepParams = <String, dynamic>{};
       final reqParam = method.getRequared();
@@ -342,8 +343,8 @@ class Service {
       for (var pName in [...reqParam, ...optParam]) {
         prepParams[pName] = params[pName];
       }
-
-      return await method.fn(prepParams);
+      final result = await method.fn(prepParams);
+      return result == null ? null : serialize(result);
     } on StateError {
       noRpcMethod(methodName);
       return null;
