@@ -188,10 +188,10 @@ class Service {
     _rpc = Rpc(bus, onCall: _handleRpcCall, onFrane: _onFrameHandler);
 
     _registerSignals();
-    await _markReady();
   }
 
   Future<void> block() async {
+    await _markReady();
     while (_serviceState.active) {
       await Future.delayed(const Duration(milliseconds: 100));
     }
