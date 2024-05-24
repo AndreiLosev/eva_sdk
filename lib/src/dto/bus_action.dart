@@ -66,6 +66,6 @@ class Action {
         oid = Oid(params['i']),
         timeout = Duration(microseconds: params['timeout']),
         priority = params['priority'],
-        params = params['params'],
+        params = ActionParams.fromMap(params['params']),
         config = params['config'];
 }
