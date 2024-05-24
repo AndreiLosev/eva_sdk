@@ -1,6 +1,6 @@
 name: eva_sdk
 description: This is a SDK for the system https://github.com/eva-ics/eva4
-version: 0.1.6
+version: 0.1.7
 repository: https://github.com/AndreiLosev/eva_sdk
 
 environment:

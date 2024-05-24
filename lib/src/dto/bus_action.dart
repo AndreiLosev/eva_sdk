@@ -36,24 +36,6 @@ class BusActionStatus {
   }
 }
 
-class BusAction {
-  final List<int> uuid;
-  final String oid;
-  final int timeout; // microseconds
-  final int priority;
-  final ActionParams? params;
-  final Map<String, Object?>? config;
-
-  BusAction(
-    this.uuid,
-    this.oid,
-    this.timeout,
-    this.priority, {
-    this.params,
-    this.config,
-  });
-}
-
 class ActionParams {
   final Object? value;
   final List<Object>? args;
@@ -64,6 +46,11 @@ class ActionParams {
     this.args,
     this.kwargs,
   });
+
+  ActionParams.fromMap(Map<String, dynamic> map)
+      : value = map['value'],
+        args = map['args'],
+        kwargs = map['kwargs'];
 }
 
 class Action {
@@ -74,11 +61,11 @@ class Action {
   final ActionParams? params;
   final Map<String, Object?>? config;
 
-  Action(BusAction event)
-      : uuid = Utf8Decoder().convert(event.uuid),
-        oid = Oid(event.oid),
-        timeout = Duration(microseconds: event.timeout),
-        priority = event.priority,
-        params = event.params,
-        config = event.config;
+  Action(Map<String, dynamic> params)
+      : uuid = Utf8Decoder().convert(params['uuid']),
+        oid = Oid(params['oid']),
+        timeout = Duration(microseconds: params['timeout']),
+        priority = params['priority'],
+        params = params['params'],
+        config = params['config'];
 }
