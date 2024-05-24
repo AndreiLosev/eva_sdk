@@ -50,10 +50,10 @@ packages:
     dependency: "direct main"
     description:
       name: busrt_client
-      sha256: ce6ba1b8dca8af703ad7d86ddc1f2f1f9d662b30f371a440a1a7510a2939655f
+      sha256: "1b27a9f02e160a12bb2c0703358f240014547112533bdc5b4a835d274edf99cd"
       url: "https://pub.dev"
     source: hosted
-    version: "0.2.0"
+    version: "0.2.1"
   collection:
     dependency: transitive
     description:
