@@ -63,7 +63,7 @@ class Action {
 
   Action(Map<String, dynamic> params)
       : uuid = Utf8Decoder().convert(params['uuid']),
-        oid = Oid(params['oid']),
+        oid = Oid(params['i']),
         timeout = Duration(microseconds: params['timeout']),
         priority = params['priority'],
         params = params['params'],
