@@ -5,8 +5,8 @@ import 'package:eva_sdk/eva_sdk.dart';
 
 class ActionQueueItem {
   final Action uAction;
-  final Completer<ActionStatus> completer;
-  final FutureOr<void> Function() fn;
+  final Completer<(ActionStatus, dynamic)> completer;
+  final FutureOr Function() fn;
 
   ActionQueueItem(this.uAction, this.fn) : completer = Completer();
 }
@@ -19,7 +19,8 @@ class ActionQueue {
 
   ActionQueue(this._limit);
 
-  Completer<ActionStatus> add(Action uAction, FutureOr<void> Function() fn) {
+  Completer<(ActionStatus, dynamic)> add(
+      Action uAction, FutureOr<void> Function() fn) {
     if (_queue.length >= _limit) {
       svc().logger.warn("ActionQueue reached the limit");
       throw Exception("ActionQueue reached the limit");
@@ -35,7 +36,7 @@ class ActionQueue {
     final item = _queue.firstWhere((e) => e.uAction.uuid == uuid);
     _queue.remove(item);
     svc().controller.eventTerminated(item.uAction);
-    item.completer.complete(ActionStatus.terminated);
+    item.completer.complete((ActionStatus.terminated, null));
   }
 
   void kill(Oid oid) {
@@ -43,7 +44,7 @@ class ActionQueue {
         _queue.firstWhere((e) => e.uAction.oid.asString() == oid.asString());
     _queue.remove(item);
     svc().controller.eventCanceled(item.uAction);
-    item.completer.complete(ActionStatus.canceled);
+    item.completer.complete((ActionStatus.canceled, null));
   }
 
   void stop() => _run = false;
@@ -61,11 +62,11 @@ class ActionQueue {
         final item = _queue.removeFirst();
         svc().controller.eventRunning(item.uAction);
         try {
-          await item.fn();
-          item.completer.complete(ActionStatus.completed);
+          final result = await item.fn();
+          item.completer.complete((ActionStatus.completed, result));
           svc().controller.eventCompleted(item.uAction);
         } catch (e) {
-          item.completer.complete(ActionStatus.failed);
+          item.completer.complete((ActionStatus.failed, null));
           svc().controller.eventFailed(item.uAction,
               out: 'unit action', err: e, exitcode: 1);
         }
