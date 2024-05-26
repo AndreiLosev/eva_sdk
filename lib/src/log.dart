@@ -11,7 +11,7 @@ class Logger {
 
   Logger(this._bus, this._minLevel);
 
-  Future<void> trace(Iterable<Object> mess) async {
+  Future<void> trace(Object mess) async {
     if (_minLevel.lessOrequal(LogLevel.trace)) {
       await _log(LogLevel.trace, mess);
     }
