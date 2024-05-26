@@ -50,6 +50,7 @@ class Service {
   final _stdinBuffer = Uint8Buffer();
   StreamSubscription<List<int>>? _stdintSubscription;
   final _processSinals = <StreamSubscription<ProcessSignal>>[];
+  late final Timer _callMethodBlock;
 
   Service._() {
     dbg("create service");
@@ -132,7 +133,6 @@ class Service {
     dbg("wait comlite");
     final timer = Stopwatch();
     timer.start();
-    final timeout = _initPaload.timeout.startup ?? _initPaload.timeout.default1;
 
     while (_serviceState.active) {
       try {
@@ -143,7 +143,7 @@ class Service {
           return;
         }
       } catch (_) {}
-      if (timer.elapsed >= timeout) {
+      if (timer.elapsed >= _startUpTimeout()) {
         throw Exception("core wait timeout");
       }
       await Future.delayed(const Duration(milliseconds: 100));
@@ -188,9 +188,14 @@ class Service {
     _rpc = Rpc(bus, onCall: _handleRpcCall, onFrane: _onFrameHandler);
 
     _registerSignals();
+
+    _callMethodBlock = Timer(_startUpTimeout() * 0.99, () async {
+      throw Exception("it is necessary to call await svc().block()");
+    });
   }
 
   Future<void> block() async {
+    _callMethodBlock.cancel();
     await _markReady();
     while (_serviceState.active) {
       await Future.delayed(const Duration(milliseconds: 100));
@@ -424,4 +429,7 @@ class Service {
 
     Future.microtask(() => _handleStdin());
   }
+
+  Duration _startUpTimeout() =>
+      _initPaload.timeout.startup ?? _initPaload.timeout.default1;
 }
