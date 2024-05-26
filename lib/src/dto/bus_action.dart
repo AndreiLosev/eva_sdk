@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:eva_sdk/src/enum/action_status.dart';
 import 'package:eva_sdk/src/oid.dart';
+import 'package:uuid/uuid.dart';
 
 class BusActionStatus {
   final List<int> uuid;
@@ -62,7 +63,7 @@ class Action {
   final Map<String, Object?>? config;
 
   Action(Map<String, dynamic> params)
-      : uuid = Utf8Decoder().convert(params['uuid']),
+      : uuid = Uuid.unparse(params['uuid']),
         oid = Oid(params['i']),
         timeout = Duration(microseconds: params['timeout']),
         priority = params['priority'],

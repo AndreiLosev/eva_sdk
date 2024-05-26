@@ -25,7 +25,7 @@ class Controller {
     return _sendEvent(action, ActionStatus.failed, out, err, exitcode ?? -1);
   }
 
-  Future<void> eventCompleted(Action action, Object? out) {
+  Future<void> eventCompleted(Action action, [Object? out]) {
     return _sendEvent(action, ActionStatus.completed, out, null, 0);
   }
 
