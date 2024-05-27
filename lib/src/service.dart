@@ -94,7 +94,7 @@ class Service {
     await _minorLoadingAction();
   }
 
-  Future<void> debugLoad(String path) async {
+  Future<void> debugLoad(String path, [String id = 'losev.test.service']) async {
     dbg("start service.load()");
     if (_serviceState.loaded) {
       throw Exception("the service is already loaded");
@@ -104,7 +104,7 @@ class Service {
     final Map<String, dynamic> setConfig = {
       'version': 1,
       'system_name': 'test-1',
-      'id': 'losev.test.service',
+      'id': id,
       'core': {
         'build': 0x55,
         'version': '123',
