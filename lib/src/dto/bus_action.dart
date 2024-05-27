@@ -48,7 +48,7 @@ class ActionParams {
     this.kwargs,
   });
 
-  ActionParams.fromMap(Map<String, dynamic> map)
+  ActionParams.fromMap(Map map)
       : value = map['value'],
         args = map['args'],
         kwargs = map['kwargs'];
