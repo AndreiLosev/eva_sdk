@@ -336,7 +336,7 @@ class Service {
       final ServiceMethod method =
           _serviceInfo.methods.firstWhere((i) => i.name == methodName);
 
-      final params = deserialize(e.payload) as Map<String, dynamic>?;
+      final params = deserialize(e.payload) as Map?;
       if (params == null) {
         final result = await method.fn({});
         return result == null ? null : serialize(result);
