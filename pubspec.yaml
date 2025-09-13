@@ -1,6 +1,6 @@
 name: eva_sdk
 description: This is a SDK for the system https://github.com/eva-ics/eva4
-version: 0.2.6
+version: 0.2.7
 repository: https://github.com/AndreiLosev/eva_sdk
 
 environment:
@@ -8,7 +8,7 @@ environment:
 
 # Add regular dependencies here.
 dependencies:
-  busrt_client: ^0.2.0
+  busrt_client: ^0.4.0
   msgpack_dart: ^1.0.1
   typed_data: ^1.3.2
   uuid: ^4.3.3
