@@ -94,7 +94,8 @@ class Service {
     await _minorLoadingAction();
   }
 
-  Future<void> debugLoad(String path, [String id = 'losev.test.service']) async {
+  Future<void> debugLoad(String path,
+      [String id = 'losev.test.service']) async {
     dbg("start service.load()");
     if (_serviceState.loaded) {
       throw Exception("the service is already loaded");
@@ -336,7 +337,7 @@ class Service {
       final ServiceMethod method =
           _serviceInfo.methods.firstWhere((i) => i.name == methodName);
 
-      final params = deserialize(e.payload) as Map?;
+      final params = e.payload.isEmpty ? null : deserialize(e.payload) as Map?;
       if (params == null) {
         final result = await method.fn({});
         return result == null ? null : serialize(result);
