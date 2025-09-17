@@ -8,3 +8,13 @@ void noRpcMethod(String? name) {
 
 Service svc() => Service.getInstanse();
 
+extension DateTimeToEvaTimestamp on DateTime {
+  double toEvaTimestamp() {
+    return millisecondsSinceEpoch.toDouble() / 1000;
+  }
+}
+
+extension EvaTimeStampToDateTime on double {
+  DateTime toDateTime() =>
+      DateTime.fromMillisecondsSinceEpoch((this * 1000).toInt());
+}

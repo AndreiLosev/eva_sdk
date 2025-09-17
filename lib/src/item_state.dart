@@ -1,5 +1,4 @@
 import 'package:eva_sdk/eva_sdk.dart';
-import 'package:eva_sdk/src/enum/eva_error_kind.dart';
 
 class ItemState {
   final Oid oid;
@@ -19,8 +18,7 @@ class ItemState {
 
     final oid = Oid(hasMatches, true);
 
-    final microseconds = (map['t'] * 1000000) as num;
-    final t = DateTime.fromMicrosecondsSinceEpoch(microseconds.toInt());
+    final t = (map['t'] as double).toDateTime();
     final ieid = (map['ieid'][0] as int, map['ieid'][1] as int);
 
     return ItemState(oid, map['status'], map['value'], t, ieid);
@@ -36,12 +34,12 @@ class ItemState {
   }
 
   Map<String, dynamic> toMap() => {
-    'oid': oid.asString(),
-    'status': status,
-    'value': value,
-    't': t,
-    'ieid': ieid,
-  };
+        'oid': oid.asString(),
+        'status': status,
+        'value': value,
+        't': t,
+        'ieid': ieid,
+      };
 }
 
 class ItemStateTyped<T extends Object> extends ItemState {
