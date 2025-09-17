@@ -18,3 +18,5 @@ extension EvaTimeStampToDateTime on double {
   DateTime toDateTime() =>
       DateTime.fromMillisecondsSinceEpoch((this * 1000).toInt());
 }
+
+void evaNow() => DateTime.now().toEvaTimestamp();
