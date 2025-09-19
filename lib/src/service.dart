@@ -247,7 +247,7 @@ class Service {
   Future<List<ItemState>> getItemsState(List<Oid> oids) async {
     final i = oids.map((e) => e.asString()).toList();
     final rpcRes =
-        await _rpc.call('core', 'item.state', params: serialize({'i': i}));
+        await _rpc.call('eva.core', 'item.state', params: serialize({'i': i}));
     final result = await rpcRes.waitCompleted();
 
     if (result == null) {
