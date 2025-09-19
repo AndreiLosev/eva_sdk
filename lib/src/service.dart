@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ffi';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -242,6 +243,21 @@ class Service {
   bool isShutdownRequested() => _serviceState.shutdownRequested;
 
   Duration getTimeout() => _initPaload.timeout.default1;
+
+  Future<List<ItemState>> getItemsState(List<Oid> oids) async {
+    final i = oids.map((e) => e.asString()).toList();
+    final rpcRes =
+        await _rpc.call('core', 'item.state', params: serialize({'i': i}));
+    final result = await rpcRes.waitCompleted();
+
+    if (result == null) {
+      throw EvaError(EvaErrorKind.io, 'empty result');
+    }
+
+    return (deserialize(result.payload) as List)
+        .map((e) => ItemState.fromItemState(e))
+        .toList();
+  }
 
   Future<void> _markReady() async {
     if (_serviceState.markedReady) {

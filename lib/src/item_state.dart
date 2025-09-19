@@ -24,6 +24,15 @@ class ItemState {
     return ItemState(oid, map['status'], map['value'], t, ieid);
   }
 
+  factory ItemState.fromItemState(Map<String, dynamic> map) {
+    final oid = Oid(map['oid']);
+
+    final t = (map['t'] as double).toDateTime();
+    final ieid = (map['ieid'][0] as int, map['ieid'][1] as int);
+
+    return ItemState(oid, map['status'], map['value'], t, ieid);
+  }
+
   ItemStateTyped<T> to<T extends Object>() {
     if (value is! T) {
       throw EvaError(EvaErrorKind.busData,
