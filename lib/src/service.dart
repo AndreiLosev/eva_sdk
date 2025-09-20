@@ -255,7 +255,8 @@ class Service {
     }
 
     return (deserialize(result.payload) as List)
-        .map((e) => ItemState.fromItemState(e))
+        .cast<Map>()
+        .map((e) => ItemState.fromItemState(e.cast()))
         .toList();
   }
 
