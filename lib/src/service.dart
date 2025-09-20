@@ -244,7 +244,7 @@ class Service {
 
   Duration getTimeout() => _initPaload.timeout.default1;
 
-  Future<List<ItemState>> getItemsState(List<Oid> oids) async {
+  Future<List<ItemState>> getItemsState(Iterable<Oid> oids) async {
     final i = oids.map((e) => e.asString()).toList();
     final rpcRes =
         await _rpc.call('eva.core', 'item.state', params: serialize({'i': i}));
