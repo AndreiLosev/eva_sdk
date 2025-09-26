@@ -7,7 +7,10 @@ class DebugLog {
 
   DebugLog._(this._path);
 
-  factory DebugLog.getInstanse([String? path]) {
+  static DebugLog? getInstanse([String? path]) {
+    if (_instanse == null && path == null) {
+      return null;
+    }
     _instanse ??= DebugLog._(path!);
 
     return _instanse!;
@@ -17,16 +20,16 @@ class DebugLog {
     if (_path == null) {
       return;
     }
-  
+
     if (_path == 'console') {
       print(mess);
       return;
     }
 
     File(_path).writeAsStringSync(
-        "${mess.toString()} ${Platform.lineTerminator}",
-        mode: FileMode.append,
-      );
+      "${mess.toString()} ${Platform.lineTerminator}",
+      mode: FileMode.append,
+    );
   }
 }
 
@@ -35,7 +38,5 @@ void dbgInit(String path) {
 }
 
 void dbg(Object mess) {
-  try {
-    DebugLog.getInstanse().log(mess);
-  } catch (_) {}
+  DebugLog.getInstanse()?.log(mess);
 }
