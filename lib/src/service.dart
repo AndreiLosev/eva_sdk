@@ -1,30 +1,17 @@
 import 'dart:async';
-import 'dart:ffi';
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:busrt_client/busrt_client.dart';
-import 'package:eva_sdk/src/controller.dart';
+import 'package:eva_sdk/eva_sdk.dart';
 import 'package:eva_sdk/src/debug_log.dart';
-import 'package:eva_sdk/src/dto/eva_error.dart';
 import 'package:eva_sdk/src/dto/initial_payload.dart';
-import 'package:eva_sdk/src/dto/service_info.dart';
-import 'package:eva_sdk/src/enum/eapi_topic.dart';
-import 'package:eva_sdk/src/enum/eva_error_kind.dart';
-import 'package:eva_sdk/src/enum/event_kind.dart';
-import 'package:eva_sdk/src/enum/log_level.dart';
 import 'package:eva_sdk/src/enum/service_payload_kind.dart';
 import 'package:eva_sdk/src/enum/service_status.dart';
-import 'package:eva_sdk/src/helpers.dart';
-import 'package:eva_sdk/src/item_state.dart';
-import 'package:eva_sdk/src/log.dart';
-import 'package:eva_sdk/src/oid.dart';
-import 'package:msgpack_dart/msgpack_dart.dart';
 import 'package:typed_data/typed_data.dart';
 import 'package:yaml/yaml.dart';
 
-typedef SubscriptionHandler = FutureOr<void> Function(
-    ItemState payload, String topic, String sender);
+typedef SubscriptionHandler =
+    FutureOr<void> Function(ItemState payload, String topic, String sender);
 
 class _ServiceState {
   bool active = true;
@@ -43,6 +30,8 @@ class Service {
   late final Controller _controller;
   late final ServiceInfo _serviceInfo;
   late final Logger _logger;
+
+  static const List<String> _loggingMethod = ['action', 'run'];
 
   final _subscriptionHandlers = <String, SubscriptionHandler>{};
   final _rawSubscriptionHandlers = <String, FutureOr<void> Function(Frame)>{};
@@ -95,8 +84,10 @@ class Service {
     await _minorLoadingAction();
   }
 
-  Future<void> debugLoad(String path,
-      [String id = 'losev.test.service']) async {
+  Future<void> debugLoad(
+    String path, [
+    String id = 'losev.test.service',
+  ]) async {
     dbg("start service.load()");
     if (_serviceState.loaded) {
       throw Exception("the service is already loaded");
@@ -216,7 +207,9 @@ class Service {
   }
 
   Future<void> subscribeOIDs(
-      Iterable<(Oid, SubscriptionHandler)> items, EventKind kind) async {
+    Iterable<(Oid, SubscriptionHandler)> items,
+    EventKind kind,
+  ) async {
     final sfx = kind.toEapiTopic();
 
     for (var (oid, fn) in items) {
@@ -229,7 +222,8 @@ class Service {
   }
 
   Future<void> subscribeRaw(
-      Iterable<(String, FutureOr<void> Function(Frame))> items) async {
+    Iterable<(String, FutureOr<void> Function(Frame))> items,
+  ) async {
     for (var (topic, fn) in items) {
       _rawSubscriptionHandlers[topic] = fn;
     }
@@ -246,8 +240,11 @@ class Service {
 
   Future<List<ItemState>> getItemsState(Iterable<Oid> oids) async {
     final i = oids.map((e) => e.asString()).toList();
-    final rpcRes =
-        await _rpc.call('eva.core', 'item.state', params: serialize({'i': i}));
+    final rpcRes = await _rpc.call(
+      'eva.core',
+      'item.state',
+      params: serialize({'i': i}),
+    );
     final result = await rpcRes.waitCompleted();
 
     if (result == null) {
@@ -291,8 +288,10 @@ class Service {
       throw Exception("bus ${_initPaload.bus.type} is not suported");
     }
 
-    final bus = Bus(_initPaload.id,
-        timeout: _initPaload.bus.timeout ?? _initPaload.timeout.default1);
+    final bus = Bus(
+      _initPaload.id,
+      timeout: _initPaload.bus.timeout ?? _initPaload.timeout.default1,
+    );
     await bus.connect(_initPaload.bus.path);
 
     return bus;
@@ -338,9 +337,9 @@ class Service {
       "test" => serialize({'status': _serviceState.active}),
       "info" => serialize(_serviceInfo.toMap()),
       "stop" => () {
-          _serviceState.active = false;
-          return null;
-        }(),
+        _serviceState.active = false;
+        return null;
+      }(),
       _ => _rpcCallWrapper(e.method!, e),
     };
   }
@@ -349,25 +348,49 @@ class Service {
     try {
       dbg([
         "_rpcCallWrapper",
-        {'RpcEventKind': e.kind.value, "payload": e.payload, "method": e.method}
+        {
+          'RpcEventKind': e.kind.value,
+          "payload": e.payload,
+          "method": e.method,
+        },
       ]);
-      final ServiceMethod method =
-          _serviceInfo.methods.firstWhere((i) => i.name == methodName);
+      final ServiceMethod method = _serviceInfo.methods.firstWhere(
+        (i) => i.name == methodName,
+      );
+      final params = e.payload.isEmpty ? {} : deserialize(e.payload) as Map;
 
-      final params = e.payload.isEmpty ? null : deserialize(e.payload) as Map?;
-      if (params == null) {
-        final result = await method.fn({});
-        return result == null ? null : serialize(result);
+      Action? action;
+
+      if (_loggingMethod.contains(method.name)) {
+        action = Action(params.cast());
+        _controller.eventPending(action);
       }
+
       final prepParams = <String, dynamic>{};
       final reqParam = method.getRequared();
-      final optParam =
-          method.getOptional().where((e) => params.keys.contains(e));
+      final optParam = method.getOptional().where(
+        (e) => params.keys.contains(e),
+      );
       for (var pName in [...reqParam, ...optParam]) {
         prepParams[pName] = params[pName];
       }
-      final result = await method.fn(prepParams);
-      return result == null ? null : serialize(result);
+
+      if (action != null) {
+        _controller.eventRunning(action);
+      }
+
+      try {
+        final result = await method.fn(prepParams);
+        if (action != null) {
+          _controller.eventCompleted(action, result);
+        }
+        return result == null ? null : serialize(result);
+      } catch (e) {
+        if (action != null) {
+          _controller.eventFailed(action, err: e, exitcode: 1);
+        }
+        throw EvaError(EvaErrorKind.rpcInternal, "error: $e");
+      }
     } on StateError {
       noRpcMethod(methodName);
       return null;
@@ -377,7 +400,7 @@ class Service {
   FutureOr<void> _onFrameHandler(Frame f) {
     dbg([
       "_onFrameHandler",
-      {'topic': f.topic, "payload": f.payload, "sender": f.sender}
+      {'topic': f.topic, "payload": f.payload, "sender": f.sender},
     ]);
     if (f.topic == null) {
       throw EvaError(EvaErrorKind.busData, "Frame topic is null");
@@ -385,8 +408,10 @@ class Service {
 
     try {
       final fn = _findTopicHandler(f.topic!, _subscriptionHandlers);
-      final payload =
-          ItemState.fromMap(f.topic!, (deserialize(f.payload) as Map).cast());
+      final payload = ItemState.fromMap(
+        f.topic!,
+        (deserialize(f.payload) as Map).cast(),
+      );
       return fn(payload, f.topic!, f.primarySender!);
     } on StateError {
       final fn = _findTopicHandler(f.topic!, _rawSubscriptionHandlers);
@@ -403,12 +428,14 @@ class Service {
 
     final regexTopics = map.keys
         .where((e) => e.endsWith("#") || e.contains("+"))
-        .map((e) => (
-              e.endsWith("#")
-                  ? e.replaceFirst('#', ".*")
-                  : e.replaceAll('+', '.+'),
-              e
-            ))
+        .map(
+          (e) => (
+            e.endsWith("#")
+                ? e.replaceFirst('#', ".*")
+                : e.replaceAll('+', '.+'),
+            e,
+          ),
+        )
         .where((e) => RegExp(e.$1).hasMatch(topic))
         .map((e) => e.$2)
         .first;
@@ -423,7 +450,8 @@ class Service {
 
     if (_initPaload.failMode && !_initPaload.reactToFail) {
       throw Exception(
-          "the service is started in react-to-fail mode, but rtf is not supported by the service");
+        "the service is started in react-to-fail mode, but rtf is not supported by the service",
+      );
     }
 
     if (_initPaload.prepareCommand != null) {
