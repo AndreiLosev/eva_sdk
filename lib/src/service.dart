@@ -387,7 +387,7 @@ class Service {
         return result == null ? null : serialize(result);
       } catch (e) {
         if (action != null) {
-          _controller.eventFailed(action, err: e, exitcode: 1);
+          _controller.eventFailed(action, err: e);
         }
         throw EvaError(EvaErrorKind.rpcInternal, "error: $e");
       }
