@@ -357,7 +357,7 @@ class Service {
       final ServiceMethod method = _serviceInfo.methods.firstWhere(
         (i) => i.name == methodName,
       );
-      final params = e.payload.isEmpty ? {} : deserialize(e.payload) as Map;
+      final params = _parseParams(e.payload);
 
       Action? action;
 
@@ -366,21 +366,12 @@ class Service {
         _controller.eventPending(action);
       }
 
-      final prepParams = <String, dynamic>{};
-      final reqParam = method.getRequared();
-      final optParam = method.getOptional().where(
-        (e) => params.keys.contains(e),
-      );
-      for (var pName in [...reqParam, ...optParam]) {
-        prepParams[pName] = params[pName];
-      }
-
       if (action != null) {
         _controller.eventRunning(action);
       }
 
       try {
-        final result = await method.fn(prepParams);
+        final result = await method.fn(params.cast());
         if (action != null) {
           _controller.eventCompleted(action, result);
         }
@@ -478,4 +469,18 @@ class Service {
 
   Duration _startUpTimeout() =>
       _initPaload.timeout.startup ?? _initPaload.timeout.default1;
+
+  Map _parseParams(Uint8List payload) {
+    if (payload.isEmpty) {
+      return {};
+    }
+
+    final params = deserialize(payload);
+
+    if (params is Map) {
+      return params;
+    }
+
+    return {};
+  }
 }

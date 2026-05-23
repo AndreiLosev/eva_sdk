@@ -6,15 +6,19 @@ class ServiceMethodParam {
   final String description;
   final bool required;
 
-  ServiceMethodParam(this.name, this.type, this.required,
-      [this.description = '']);
+  ServiceMethodParam(
+    this.name,
+    this.type,
+    this.required, [
+    this.description = '',
+  ]);
 
   Map<String, dynamic> toMap() => {
-        'name': name,
-        'type': type,
-        'description': description,
-        'required': required,
-      };
+    'name': name,
+    'type': type,
+    'description': description,
+    'required': required,
+  };
 }
 
 class ServiceMethod {
@@ -38,10 +42,10 @@ class ServiceMethod {
       params.where((e) => !e.required).map((e) => e.name);
 
   Map<String, dynamic> toMap() => {
-        'name': name,
-        'description': description,
-        'params': params.map((e) => e.toMap()),
-      };
+    'name': name,
+    'description': description,
+    'params': params.map((e) => e.toMap()),
+  };
 }
 
 class ServiceInfo {
@@ -57,9 +61,9 @@ class ServiceInfo {
   }
 
   Map<String, dynamic> toMap() => {
-        'author': author,
-        'description': description,
-        'version': version,
-        'methods': methods.map((e) => e.toMap()),
-      };
+    'author': author,
+    'description': description,
+    'version': version,
+    'methods': methods.map((e) => e.toMap()),
+  };
 }
