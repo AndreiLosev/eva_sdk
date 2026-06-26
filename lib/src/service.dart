@@ -369,17 +369,19 @@ class Service {
       if (action != null) {
         _controller.eventRunning(action);
       }
-
+      dbg('test $method');
       try {
         final result = await method.fn(params.cast());
+        dbg('test $result');
         if (action != null) {
           _controller.eventCompleted(action, result);
         }
         return result == null ? null : serialize(result);
-      } catch (e) {
+      } catch (e, s) {
         if (action != null) {
           _controller.eventFailed(action, err: e);
         }
+        dbg([e, s]);
         throw EvaError(EvaErrorKind.rpcInternal, "error: $e");
       }
     } on StateError {
