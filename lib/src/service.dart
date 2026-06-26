@@ -382,6 +382,7 @@ class Service {
           _controller.eventFailed(action, err: e);
         }
         dbg([e, s]);
+        logger.error("error: $e");
         throw EvaError(EvaErrorKind.rpcInternal, "error: $e");
       }
     } on StateError {
